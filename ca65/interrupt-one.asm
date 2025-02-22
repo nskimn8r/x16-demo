@@ -23,7 +23,11 @@
 ;     1) Disable interrupts
 ;     2) Set the address of the custom subroutine on the kernal interrupt vector
 ;           a) Chain interrupts by setting a new subroutine on the vector
-;           b) Return by jumping to the system interrupt routine
+;           b) A VSYNC interrupt should exist in the chain
+;           c) Return custom interrupt via 'rti' after pulling x,y,a registers
+;              off the stack
+;           d) Return from VSYNC interrupt jumping to the system interrupt 
+;              routine
 ;     4) Set the interrupt enable flags
 ;           a) scanline number
 ;           b) sprite collision
@@ -93,6 +97,9 @@ COLOR_L_GRY       = 15
 ; - addr - this is the address of the subroutine for the interrupt
 .macro SetupLineInterrupt line, addr
 
+    lda #VERA_LINE_FLAG
+    sta VERA_IEN
+
 	lda #<line    ; set raster interrupt to trigger on scanline
 	sta VERA_IRQLINE_L
     lda #>line
@@ -113,6 +120,21 @@ COLOR_L_GRY       = 15
 
 .endmacro
 
+;------------------------------------------------------------------------------
+; params: address (2 bytes)
+;
+; - addr - this is the address of the subroutine for the interrupt
+.macro SetupVsyncInterrupt addr
+
+    lda #VERA_VSYNC_FLAG
+    sta VERA_IEN
+
+	lda #<addr ; set raster interrupt routine address
+	sta CINV_L ; onto the kernal interrupt vector
+	lda #>addr
+	sta CINV_H
+
+.endmacro
 
 ;------------------------------------------------------------------------------
 Main:
@@ -142,10 +164,6 @@ Main:
 SetupInterrupt:
 
     sei ; disable interrupts
-
-    ; tell the interrupt enable register to trigger on VSYNC and Scanline
-    lda #VERA_LINE_FLAG
-    sta VERA_IEN
 
     SetupLineInterrupt 100, FirstInterrupt
 
@@ -191,8 +209,19 @@ FirstInterrupt:
 
         ; chain to the second interrupt 
         SetupLineInterrupt 300, SecondInterrupt
+        
+        ; IRQ implicitly pushes return address and flags onto stack
+        ; we need to pull these back off so rti can return nicely
+        ply
+        plx
+        pla
+        rti
 
     @SystemRoutine:
+        ; reaching here is possibly an error, but go ahead and jump out nicely
+        lda #$0F
+        sta VERA_ISR ; ack the status register
+
         ; call the default system interrupt routine
         jmp kernal_irq
 
@@ -214,10 +243,44 @@ SecondInterrupt:
         lda #COLOR_PURPLE
         sta VERA_DC_BORDER
 
+        ; chain to the VSYNC interrupt
+        SetupVsyncInterrupt VerticalSync
+
+        ; IRQ implicitly pushes return address and flags onto stack
+        ; we need to pull these back off so rti can return nicely
+        ply
+        plx
+        pla
+        rti
+
+    @SystemRoutine:
+        ; reaching here is possibly an error, but go ahead and jump out nicely
+        lda #$0F
+        sta VERA_ISR ; ack the status register
+
+        ; call the default system interrupt routine
+        jmp kernal_irq
+
+
+;------------------------------------------------------------------------------
+VerticalSync:
+    lda VERA_ISR
+    tax
+    and #VERA_VSYNC_FLAG
+    beq @SystemRoutine
+
+        ; ACK the vsync interrupt
+        txa 
+        ora #VERA_VSYNC_FLAG
+        sta VERA_ISR
+
+        ; do vsync things
+        ; ...
+
         ; bounce back to the first interrupt 
         SetupLineInterrupt 100, FirstInterrupt
 
     @SystemRoutine:
-        ; call the default system interrupt routine
+        ; call the default system interrupt routine after vsync
         jmp kernal_irq
 
