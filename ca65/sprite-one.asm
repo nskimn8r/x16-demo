@@ -4,7 +4,6 @@
 ; this was written using assembler ca65 (version V2.19 and above)
 ; 
 ; mkdir bin
-; mkdir obj
 ; cl65 -t cx16 -o bin/SPRITEONE.PRG sprite-one.asm 
 ; x16emu.exe -prg bin/SPRITEONE.PRG -run
 ;
@@ -163,7 +162,7 @@ SetSpriteAttr0Ptr:
     stz veractl
 
     ; destination vera pointer (3 bytes - hi, mid, and low)
-    lda #^SPRITE_ATTRIBUTE_0   ; '^' = bytes 23-16 (aka bank bytes)
+    lda #^SPRITE_ATTRIBUTE_0   ; '^' = bits 23-16 (aka bank byte)
     ora #VERA_STRIDE_1         ; stride = 1 - increment this address by # of bytes 
                                ; amount while writing to selected veradata port
     sta verahi
@@ -178,8 +177,7 @@ SetSpriteAttr0Ptr:
 
 
 ;------------------------------------------------------------------------------
-; converts the ascii art to a single color sprite data, and stows it 
-; into Vera memory.
+; converts the ascii art to color sprite data, and stows it into Vera memory.
 CopySpriteImageData0:
 
     jsr SetSpriteImage0Ptr
@@ -290,9 +288,9 @@ SpriteAttributes0:
     .byte $00FF & (SPRITE_IMAGE_DATA_0>>5) ; Address (12:5)
     .byte SPRITE_ATTR_MODE_8bpp | (SPRITE_IMAGE_DATA_0>>13) ; Mode - Address (16:13)
     .byte $50 ; X (7:0) - low byte of the X coordinate
-    .byte $00 ; X (9:8) - bottom 2 bytes in hi byte of the X
+    .byte $00 ; X (9:8) - bottom 2 bits in hi byte of the X
     .byte $50 ; Y (7:0) - low byte of the Y coordinate
-    .byte $00 ; Y (9:8) - bottom 2 bytes in hi byte of the Y
+    .byte $00 ; Y (9:8) - bottom 2 bits in hi byte of the Y
     .byte SPRITE_ATTR_Z_TOP_MOST ; Collision mask|Z-depth|V-flip|H-flip
     .byte SPRITE_ATTR_HEIGHT_32 | SPRITE_ATTR_WIDTH_16 | SPRITE_ATTR_PALETTE_0 ; Sprite height | Sprite width | Palette offset
 
