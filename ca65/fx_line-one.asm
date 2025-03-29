@@ -30,6 +30,7 @@ veramid  = verareg+1
 verahi   = verareg+2
 
 veradat0 = verareg+3 ; data read / write port on Address Select = 0
+veradat1 = verareg+4 ; data read / write port on Address Selct = 1
 
 veractl  = verareg+5 ; vera control register
 veradcv  = verareg+9 ; vera video register DCSEL=0
@@ -105,10 +106,10 @@ COLOR_L_GRY       = 15
 
 
 start:
-    ; set screen mode 
-    lda #3
+    ; set screen mode to bitmap 
+    lda #$80
     clc ; a clear tells the kernel this is setting a value from reg A
-    jsr screen_mode ; same things as 'SCREEN 3' in BASIC
+    jsr screen_mode ; same things as 'SCREEN $80' in BASIC
 
     ;------------------------------------------------------------------------------
     ; setup layer 0 to be in bitmap mode, 320, 8bpp
@@ -135,8 +136,10 @@ start:
     lda #DCSEL_2       ; DCSEL=2, ADDRSEL=0
     sta veractl
 
-    lda #VERA_STRIDE_320 ; ADDR0 increment: +320 bytes for the octet
+    lda #VERA_STRIDE_320 ; ADDR0 increment: +320 bytes for 8bpp bitmap 320px wide
     sta verahi
+    stz veramid
+    stz veralo
 
     ;------------------------------------------------------------------------------
     lda #FX_CTRL_ADRESS_LINE_DRAW ; Entering *line draw mode* (when DCSEL==2)
@@ -152,15 +155,12 @@ start:
     stz veramid ; Setting start to $00000
     stz veralo  ; Setting start to $00000
 
-
     ;------------------------------------------------------------------------------
     ; start drawing the line
 
     ; DCSEL_3 enables fx_x_inc_l & fx_x_inc_h 
     lda #DCSEL_3 ; DCSEL=3, ADDRSEL=0
     sta veractl
-    stz veramid
-    stz veralo
 
     ; Note: 73<<1 is just a nice looking slope ;)
     ; 73<<1 (=146) means: for each x pixel-step there is 146/512th y pixel-step
@@ -173,7 +173,7 @@ start:
     lda #COLOR_WHITE
 
     draw_line_next_pixel:
-       sta veradat0
+       sta veradat1
        dex
        bne draw_line_next_pixel
 
@@ -182,7 +182,6 @@ start:
 
 ;------------------------------------------------------------------------------
 ; clear the bitmap to purple color
-
 color_choice: .byte $00
 ClearBitmap:
 
