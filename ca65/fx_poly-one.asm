@@ -307,7 +307,7 @@ ClearBitmap:
     stz veralo
 
     clear_screen_start:
-        ldx #$FF
+        ldx #$00
         lda color_choice
         @clear_loop:
             sta veradat0

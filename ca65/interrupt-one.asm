@@ -173,7 +173,7 @@ SetupInterrupt:
 
 
 ;------------------------------------------------------------------------------
-; set bit 9 on the interrupt enable register
+; set bit 8 on the interrupt enable register
 SetIRQLineHigh:
     lda VERA_IEN
     ora #VERA_IRQLINE_H
@@ -182,7 +182,7 @@ SetIRQLineHigh:
 
 
 ;------------------------------------------------------------------------------
-; unset bit 9 on the interrupt enable register
+; unset bit 8 on the interrupt enable register
 UnsetIRQLineHigh:
     lda VERA_IEN
     and #(255-VERA_IRQLINE_H)
